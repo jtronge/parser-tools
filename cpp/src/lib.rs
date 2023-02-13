@@ -28,15 +28,18 @@ impl Preprocessor {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum PreprocessorError {}
+#[derive(PartialEq, Debug)]
+pub enum Error {
+    IOError(String),
+}
 
-type Result<T> = std::result::Result<T, PreprocessorError>;
+type Result<T> = std::result::Result<T, Error>;
 
 impl Iterator for Preprocessor {
     type Item = Result<Atom>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // TODO: Read tokens, doing any replacements necessary
         None
     }
 }
