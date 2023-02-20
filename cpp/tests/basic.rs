@@ -1,8 +1,8 @@
 use std::collections::HashMap;
+use ctokens::Token;
 use cpp::{
     Preprocessor,
     PreprocessorOptions,
-    Atom,
 };
 mod common;
 use common::resource;
@@ -26,7 +26,7 @@ fn xyz() {
         include_paths: vec![],
     };
     let mut pp = Preprocessor::new(&src, opts);
-    assert_eq!(pp.next(), Some(Ok(Atom::Token("xyz".to_string()))));
-    assert_eq!(pp.next(), Some(Ok(Atom::Token("xyz".to_string()))));
+    assert_eq!(pp.next(), Some(Ok(Token::Ident("xyz".to_string()))));
+    assert_eq!(pp.next(), Some(Ok(Token::Ident("xyz".to_string()))));
     assert_eq!(pp.next(), None);
 }

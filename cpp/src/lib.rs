@@ -3,13 +3,12 @@ use std::collections::{
     VecDeque,
 };
 use std::path::Path;
+use ctokens::Token;
 
-mod atom;
 mod cmacro;
 mod state;
 mod line_processor;
 
-pub use atom::Atom;
 use cmacro::Macro;
 use state::State;
 
@@ -28,7 +27,7 @@ pub struct PreprocessorOptions {
 /// C Preprocessor.
 pub struct Preprocessor {
     state: State,
-    ready: VecDeque<Atom>,
+    ready: VecDeque<Token>,
 }
 
 impl Preprocessor {
@@ -40,14 +39,14 @@ impl Preprocessor {
         }
     }
 
-    /// Get more atoms from the state and replace tokens.
+    /// Get more tokens from the state and replace tokens.
     fn get_more(&mut self) -> Result<()> {
         Ok(())
     }
 }
 
 impl Iterator for Preprocessor {
-    type Item = Result<Atom>;
+    type Item = Result<Token>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.ready.len() == 0 {
