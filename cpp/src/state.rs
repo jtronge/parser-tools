@@ -1,6 +1,18 @@
 use std::collections::VecDeque;
 use std::fs::File;
 use ctokens::Token;
+use nom::{
+    IResult,
+    character::complete::{
+        char,
+        space0,
+        space1,
+        alphanumeric0,
+        alphanumeric1,
+    },
+    bytes::complete::tag,
+    error::VerboseError,
+};
 use crate::{
     Error,
     Result,
@@ -28,6 +40,19 @@ impl State {
 
     /// Process a directive line and update the state.
     fn process_directive(&mut self, line: &str) -> Result<()> {
+        fn match_define(line: &str) -> IResult<&str, &str> {
+            let (i, _) = space0(line)?;
+            let (i, _) = char('#')(i)?;
+            let (i, _) = space0(i)?;
+            let (i, _) = tag("define")(i)?;
+            let (i, _) = space1(i)?;
+            let (i, define) = alphanumeric1(i)?;
+            space1(i).map(|(i, _)| (define, i))
+        }
+
+        if let Ok((define, i)) = match_define(line) {
+            panic!("Got define: {}", define);
+        }
         Ok(())
     }
 
@@ -77,16 +102,6 @@ impl Iterator for State {
             .map(|token| Ok(token))
     }
 }
-
-use nom::{
-    IResult,
-    character::complete::{
-        space0,
-        char,
-        alphanumeric0,
-    },
-    error::VerboseError,
-};
 
 /// Check if the line is a directive.
 fn is_directive(line: &str) -> bool {

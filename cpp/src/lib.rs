@@ -15,6 +15,7 @@ use state::State;
 #[derive(Clone, PartialEq, Debug)]
 pub enum Error {
     IOError(String),
+    ParserError(String),
 }
 
 type Result<T> = std::result::Result<T, Error>;
