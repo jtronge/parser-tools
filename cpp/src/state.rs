@@ -10,6 +10,7 @@ use nom::{
         alphanumeric0,
         alphanumeric1,
     },
+    multi::many0,
     bytes::complete::tag,
     error::VerboseError,
 };
@@ -40,18 +41,63 @@ impl State {
 
     /// Process a directive line and update the state.
     fn process_directive(&mut self, line: &str) -> Result<()> {
-        fn match_define(line: &str) -> IResult<&str, &str> {
+        fn match_initial_define(line: &str) -> IResult<&str, &str> {
             let (i, _) = space0(line)?;
             let (i, _) = char('#')(i)?;
             let (i, _) = space0(i)?;
             let (i, _) = tag("define")(i)?;
-            let (i, _) = space1(i)?;
-            let (i, define) = alphanumeric1(i)?;
-            space1(i).map(|(i, _)| (define, i))
+            space1(i)
         }
 
-        if let Ok((define, i)) = match_define(line) {
-            panic!("Got define: {}", define);
+        fn match_define_obj(line: &str) -> IResult<&str, &str> {
+            let (i, _) = match_initial_define(line)?;
+            let (i, name) = alphanumeric1(i)?;
+            space1(i).map(|(i, _)| (i, name))
+        }
+
+        /// Match a function-like macro.
+        fn match_define_fn(line: &str) -> IResult<&str, (&str, Vec<&str>)> {
+            let (i, _) = match_initial_define(line)?;
+            let (i, name) = alphanumeric1(i)?;
+            let (i, _) = char('(')(i)?;
+            // Get the arguments
+            // let mut args = vec![];
+/*
+            let (i, _) = space0(i)?;
+            loop {
+                if let Ok((tmp_i, argname)) = alphanumeric1::<&str, &str>(i) {
+                    args.push(argname);
+                    let (tmp_i, _) = space0(tmp_i)?;
+                    i = tmp_i;
+                    if let Ok((tmp_i, _)) = char::<&str, &str>(',')(tmp_i) {
+                        let (tmp_i, _) = space0(tmp_i)?;
+                        i = tmp_i;
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+*/
+/*
+            let (i, args) = many0(|i| {
+                let (i, _) = space0(i)?;
+                let (i, argname) = alphanumeric1(i)?;
+                let (i, _) = space0(i)?;
+                char(',')
+            })?;
+*/
+            // TODO: This is incorrect
+            /* let (i, args) = many0(alphanumeric1)?; */
+            char(')')(i).map(|(i, _)| (i, (name, vec![])))
+        }
+
+        if let Ok((i, name)) = match_define_obj(line) {
+            panic!("Got define for object macro: {}", name);
+        }
+        if let Ok((i, (name, args))) = match_define_fn(line) {
+            panic!("Got define for function-like macro: {}({:?})", name, args);
         }
         Ok(())
     }
