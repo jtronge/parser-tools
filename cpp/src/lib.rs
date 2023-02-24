@@ -3,7 +3,10 @@ use std::collections::{
     VecDeque,
 };
 use std::path::Path;
-use ctokens::Token;
+use ctokens::{
+    Token,
+    TokenError,
+};
 
 mod cmacro;
 mod state;
@@ -16,6 +19,8 @@ use state::State;
 pub enum Error {
     IOError(String),
     ParserError(String),
+    TokenError(TokenError),
+    InvalidMacro,
 }
 
 type Result<T> = std::result::Result<T, Error>;

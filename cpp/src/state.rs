@@ -1,18 +1,24 @@
 use std::collections::VecDeque;
 use std::fs::File;
-use ctokens::Token;
+use ctokens::{Token, TokenIter};
 use nom::{
     IResult,
     character::complete::{
         char,
         space0,
         space1,
+        alpha1,
         alphanumeric0,
         alphanumeric1,
     },
-    multi::many0,
+    multi::{
+        many0,
+        separated_list0,
+    },
     bytes::complete::tag,
     error::VerboseError,
+    sequence::pair,
+    branch::alt,
 };
 use crate::{
     Error,
@@ -41,6 +47,14 @@ impl State {
 
     /// Process a directive line and update the state.
     fn process_directive(&mut self, line: &str) -> Result<()> {
+        /// Match and return an identifier
+        fn ident(i: &str) -> IResult<&str, &str> {
+            let start = i;
+            let (i, _) = alt((alpha1, tag("_")))(i)?;
+            alt((tag("_"), alphanumeric1))(i)
+                .map(|(i, rest)| (i, &start[..rest.len() + 1]))
+        }
+
         fn match_initial_define(line: &str) -> IResult<&str, &str> {
             let (i, _) = space0(line)?;
             let (i, _) = char('#')(i)?;
@@ -51,60 +65,43 @@ impl State {
 
         fn match_define_obj(line: &str) -> IResult<&str, &str> {
             let (i, _) = match_initial_define(line)?;
-            let (i, name) = alphanumeric1(i)?;
+            let (i, name) = ident(i)?;
             space1(i).map(|(i, _)| (i, name))
         }
 
         /// Match a function-like macro.
         fn match_define_fn(line: &str) -> IResult<&str, (&str, Vec<&str>)> {
             let (i, _) = match_initial_define(line)?;
-            let (i, name) = alphanumeric1(i)?;
+            let (i, name) = ident(i)?;
+            // No space between the name and the parenthesis
             let (i, _) = char('(')(i)?;
             // Get the arguments
-            // let mut args = vec![];
-/*
-            let (i, _) = space0(i)?;
-            loop {
-                if let Ok((tmp_i, argname)) = alphanumeric1::<&str, &str>(i) {
-                    args.push(argname);
-                    let (tmp_i, _) = space0(tmp_i)?;
-                    i = tmp_i;
-                    if let Ok((tmp_i, _)) = char::<&str, &str>(',')(tmp_i) {
-                        let (tmp_i, _) = space0(tmp_i)?;
-                        i = tmp_i;
-                    } else {
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-*/
-/*
-            let (i, args) = many0(|i| {
-                let (i, _) = space0(i)?;
-                let (i, argname) = alphanumeric1(i)?;
-                let (i, _) = space0(i)?;
-                char(',')
-            })?;
-*/
             // TODO: This is incorrect
-            /* let (i, args) = many0(alphanumeric1)?; */
-            char(')')(i).map(|(i, _)| (i, (name, vec![])))
+            let (i, args) = separated_list0(
+                pair(space0, pair(char(','), space0)),
+                ident,
+            )(i)?;
+            char(')')(i).map(|(i, _)| (i, (name, args)))
         }
 
         if let Ok((i, name)) = match_define_obj(line) {
-            panic!("Got define for object macro: {}", name);
+            eprintln!("Got define for object macro: {}", name);
+            Ok(())
+        } else if let Ok((i, (name, args))) = match_define_fn(line) {
+            eprintln!("Got define for function-like macro: {}({:?})", name, args);
+            Ok(())
+        } else {
+            Err(Error::InvalidMacro)
         }
-        if let Ok((i, (name, args))) = match_define_fn(line) {
-            panic!("Got define for function-like macro: {}({:?})", name, args);
-        }
-        Ok(())
     }
 
     /// Tokenize a non-directive line of the source and push the tokens onto
     /// the end of the buffer.
     fn tokenize(&mut self, line: &str) -> Result<()> {
+        for res in TokenIter::new(line) {
+            let tok = res.map_err(|err| Error::TokenError(err))?;
+            self.buffer.push_back(tok);
+        }
         Ok(())
     }
 }
