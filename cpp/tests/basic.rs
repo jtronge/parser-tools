@@ -9,7 +9,7 @@ use common::resource;
 
 #[test]
 fn empty() {
-    let src = resource("test.c");
+    let src = resource("empty.c");
     let opts = PreprocessorOptions {
         defs: HashMap::new(),
         include_paths: vec![],

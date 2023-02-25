@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::fs::File;
+use std::collections::HashMap;
 use ctokens::{Token, TokenIter};
 use nom::{
     IResult,
@@ -26,6 +27,7 @@ use crate::{
     PreprocessorOptions,
 };
 use crate::line_processor::LineProcessor;
+use crate::cmacro::Macro;
 
 /// State at an instant in time of the C preprocessor.
 pub struct State {
@@ -33,6 +35,7 @@ pub struct State {
     /// Line processor
     lp: LineProcessor<File>,
     buffer: VecDeque<Token>,
+    defines: HashMap<String, Macro>,
 }
 
 impl State {
@@ -42,6 +45,7 @@ impl State {
             opts,
             lp: LineProcessor::new(fp),
             buffer: VecDeque::new(),
+            defines: HashMap::new(),
         }
     }
 
@@ -85,6 +89,12 @@ impl State {
         }
 
         if let Ok((i, name)) = match_define_obj(line) {
+            let mut toks = vec![];
+            for res in TokenIter::new(i) {
+                let tok = res.map_err(|err| Error::TokenError(err))?;
+                toks.push(tok);
+            }
+            self.defines.insert(name.to_string(), Macro::Object(toks));
             eprintln!("Got define for object macro: {}", name);
             Ok(())
         } else if let Ok((i, (name, args))) = match_define_fn(line) {
