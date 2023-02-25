@@ -16,6 +16,14 @@ type Result<T> = std::result::Result<T, TokenError>;
 pub enum Token {
     /// C Identifier
     Ident(String),
+    /// String literal
+    StringLit(String),
+    /// ,
+    Comma,
+    /// (
+    LParen,
+    /// )
+    RParen,
 }
 
 /// To be used for iterating over the tokens of an &str.
