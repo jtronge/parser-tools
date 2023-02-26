@@ -1,7 +1,9 @@
 use std::collections::VecDeque;
 use std::fs::File;
 use std::collections::HashMap;
+use std::rc::Rc;
 use ctokens::{Token, TokenIter};
+use matching::cident;
 use nom::{
     IResult,
     character::complete::{
@@ -26,7 +28,6 @@ use crate::{
     Result,
     PreprocessorOptions,
 };
-use std::rc::Rc;
 use crate::line_processor::LineProcessor;
 use crate::cmacro::Macro;
 
@@ -59,11 +60,6 @@ impl State {
 
     /// Process a directive line and update the state.
     fn process_directive(&mut self, line: &str) -> Result<()> {
-        /// Match and return an identifier
-        fn ident(i: &str) -> IResult<&str, &str> {
-            alphanumeric1(i)
-        }
-
         fn match_initial_define(line: &str) -> IResult<&str, &str> {
             let (i, _) = space0(line)?;
             let (i, _) = char('#')(i)?;
@@ -74,21 +70,21 @@ impl State {
 
         fn match_define_obj(line: &str) -> IResult<&str, &str> {
             let (i, _) = match_initial_define(line)?;
-            let (i, name) = ident(i)?;
+            let (i, name) = cident(i)?;
             space1(i).map(|(i, _)| (i, name))
         }
 
         /// Match a function-like macro.
         fn match_define_fn(line: &str) -> IResult<&str, (&str, Vec<&str>)> {
             let (i, _) = match_initial_define(line)?;
-            let (i, name) = ident(i)?;
+            let (i, name) = cident(i)?;
             // No space between the name and the parenthesis
             let (i, _) = char('(')(i)?;
             // Get the arguments
             // TODO: This is incorrect
             let (i, args) = separated_list0(
                 pair(space0, pair(char(','), space0)),
-                ident,
+                cident,
             )(i)?;
             char(')')(i).map(|(i, _)| (i, (name, args)))
         }

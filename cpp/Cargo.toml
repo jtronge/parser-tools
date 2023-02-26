@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+matching = { path = "../matching" }
 ctokens = { path = "../ctokens" }
 nom = "7.1.3"
