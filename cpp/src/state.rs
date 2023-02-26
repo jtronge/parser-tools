@@ -26,6 +26,7 @@ use crate::{
     Result,
     PreprocessorOptions,
 };
+use std::rc::Rc;
 use crate::line_processor::LineProcessor;
 use crate::cmacro::Macro;
 
@@ -35,7 +36,7 @@ pub struct State {
     /// Line processor
     lp: LineProcessor<File>,
     buffer: VecDeque<Token>,
-    defines: HashMap<String, Macro>,
+    defines: HashMap<String, Rc<Macro>>,
 }
 
 impl State {
@@ -49,14 +50,18 @@ impl State {
         }
     }
 
+    pub fn find_macro(&self, name: &str) -> Option<Rc<Macro>> {
+        match self.defines.get(&name.to_string()) {
+            Some(mac) => Some(Rc::clone(mac)),
+            None => None,
+        }
+    }
+
     /// Process a directive line and update the state.
     fn process_directive(&mut self, line: &str) -> Result<()> {
         /// Match and return an identifier
         fn ident(i: &str) -> IResult<&str, &str> {
-            let start = i;
-            let (i, _) = alt((alpha1, tag("_")))(i)?;
-            alt((tag("_"), alphanumeric1))(i)
-                .map(|(i, rest)| (i, &start[..rest.len() + 1]))
+            alphanumeric1(i)
         }
 
         fn match_initial_define(line: &str) -> IResult<&str, &str> {
@@ -89,16 +94,21 @@ impl State {
         }
 
         if let Ok((i, name)) = match_define_obj(line) {
-            let mut toks = vec![];
-            for res in TokenIter::new(i) {
-                let tok = res.map_err(|err| Error::TokenError(err))?;
-                toks.push(tok);
-            }
-            self.defines.insert(name.to_string(), Macro::Object(toks));
+            let toks = tokenize(i)?;
+            self.defines.insert(name.to_string(), Rc::new(Macro::Object(toks)));
             eprintln!("Got define for object macro: {}", name);
             Ok(())
         } else if let Ok((i, (name, args))) = match_define_fn(line) {
             eprintln!("Got define for function-like macro: {}({:?})", name, args);
+            let toks = tokenize(i)?;
+            let args: Vec<String> = args
+                .iter()
+                .map(|arg| arg.to_string())
+                .collect();
+            self.defines.insert(
+                name.to_string(),
+                Rc::new(Macro::Function(args, toks))
+            );
             Ok(())
         } else {
             Err(Error::InvalidMacro)
@@ -169,6 +179,15 @@ fn is_directive(line: &str) -> bool {
         Ok(_) => true,
         Err(_) => false,
     }
+}
+
+fn tokenize(i: &str) -> Result<Vec<Token>> {
+    let mut toks = vec![];
+    for res in TokenIter::new(i) {
+        let tok = res.map_err(|err| Error::TokenError(err))?;
+        toks.push(tok);
+    }
+    Ok(toks)
 }
 
 #[cfg(test)]

@@ -11,9 +11,11 @@ use ctokens::{
 mod cmacro;
 mod state;
 mod line_processor;
+mod scanner;
 
 use cmacro::Macro;
 use state::State;
+use scanner::Scanner;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Error {
@@ -32,22 +34,16 @@ pub struct PreprocessorOptions {
 
 /// C Preprocessor.
 pub struct Preprocessor {
-    state: State,
-    ready: VecDeque<Token>,
+    scanner: Scanner,
 }
 
 impl Preprocessor {
     /// Initialize a new C Preprocessor tool.
     pub fn new(path: &str, opts: PreprocessorOptions) -> Preprocessor {
+        let state = State::new(path, opts);
         Preprocessor {
-            state: State::new(path, opts),
-            ready: VecDeque::new(),
+            scanner: Scanner::new(state),
         }
-    }
-
-    /// Get more tokens from the state and replace tokens.
-    fn get_more(&mut self) -> Result<()> {
-        Ok(())
     }
 }
 
@@ -55,17 +51,17 @@ impl Iterator for Preprocessor {
     type Item = Result<Token>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.ready.len() == 0 {
+        if self.scanner.ready.len() == 0 {
             // Need to refill the ready buffer
-            if let Err(e) = self.get_more() {
-                return Some(Err(e))
+            if let Err(e) = self.scanner.scan() {
+                return Some(Err(e));
             }
         }
-        if self.ready.len() == 0 {
+        if self.scanner.ready.len() == 0 {
             // No more tokens
             None
         } else {
-            self.ready
+            self.scanner.ready
                 .pop_front()
                 .map(|a| Ok(a))
         }
