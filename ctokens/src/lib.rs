@@ -6,9 +6,12 @@ use nom::{
         alphanumeric1,
     },
 };
+use matching;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum TokenError {}
+pub enum TokenError {
+    InvalidToken,
+}
 
 type Result<T> = std::result::Result<T, TokenError>;
 
@@ -44,12 +47,27 @@ impl<'a> Iterator for TokenIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let (i, _) = space0::<&str, VerboseError<&str>>(self.input).ok()?;
-        match alphanumeric1::<&str, VerboseError<&str>>(i) {
-            Ok((i, ident)) => {
-                self.input = i;
-                Some(Ok(Token::Ident(ident.to_string())))
-            }
-            Err(_) => None,
+        if i.len() == 0 {
+            return None;
+        }
+
+        if let Ok((i, ident)) = matching::cident(i) {
+            self.input = i;
+            Some(Ok(Token::Ident(ident.to_string())))
+        } else if let Ok((i, _)) = matching::lparen(i) {
+            self.input = i;
+            Some(Ok(Token::LParen))
+        } else if let Ok((i, _)) = matching::rparen(i) {
+            self.input = i;
+            Some(Ok(Token::RParen))
+        } else if let Ok((i, _)) = matching::comma(i) {
+            self.input = i;
+            Some(Ok(Token::Comma))
+        } else if let Ok((i, lit)) = matching::cstring_lit(i) {
+            self.input = i;
+            Some(Ok(Token::StringLit(lit.to_string())))
+        } else {
+            Some(Err(TokenError::InvalidToken))
         }
     }
 }

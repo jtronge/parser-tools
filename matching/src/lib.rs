@@ -51,6 +51,27 @@ pub fn cident(i: &str) -> IResult<&str, &str> {
     )(i)
 }
 
+/// Match a left parenthesis.
+pub fn lparen(i: &str) -> IResult<&str, &str> {
+    tag("(")(i)
+}
+
+/// Match a right parenthesis.
+pub fn rparen(i: &str) -> IResult<&str, &str> {
+    tag(")")(i)
+}
+
+/// Match a comma.
+pub fn comma(i: &str) -> IResult<&str, &str> {
+    tag(",")(i)
+}
+
+/// Match a c string literal.
+pub fn cstring_lit(i: &str) -> IResult<&str, &str> {
+    // TODO
+    alphanumeric1(i)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
