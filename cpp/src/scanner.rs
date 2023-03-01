@@ -2,9 +2,9 @@ use std::borrow::Borrow;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use ctokens::Token;
-use crate::Result;
-use crate::state::State;
+use crate::{Result, Error};
 use crate::cmacro::Macro;
+use crate::state::State;
 
 pub struct Scanner {
     pub state: State,
@@ -51,4 +51,25 @@ impl Scanner {
         }
         Ok(())
     }
+}
+
+fn get_args(ti: impl Iterator<Item=Token>) -> Result<Vec<Vec<Token>>> {
+    let mut args = vec![];
+    let mut ti = ti.peekable();
+    loop {
+        let mut arg = vec![];
+        loop {
+            match ti.peek() {
+                Some(Token::Comma) | Some(Token::RParen) | None => break,
+                _ => (),
+            }
+            arg.push(ti.next().unwrap());
+        }
+        match ti.peek() {
+            None => return Err(Error::MissingClosingParenMacroCall),
+            Some(Token::RParen) => break,
+            _ => (),
+        }
+    }
+    Ok(args)
 }

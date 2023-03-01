@@ -22,6 +22,8 @@ pub enum Error {
     IOError(String),
     ParserError(String),
     TokenError(TokenError),
+    /// Missing a closing parenthesis for a macro all
+    MissingClosingParenMacroCall,
     InvalidMacro,
 }
 
