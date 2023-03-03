@@ -105,4 +105,19 @@ mod test {
     fn alpha_underscore() {
         assert_eq!(cident("ab_cd_ef_gh_").unwrap(), ("", "ab_cd_ef_gh_"));
     }
+
+    #[test]
+    fn empty_cstring_lit() {
+        assert_eq!(cstring_lit("\"\"").unwrap(), ("", ""));
+    }
+
+    #[test]
+    fn nonempty_cstring_lit() {
+        assert_eq!(cstring_lit("\"123\"").unwrap(), ("", "123"));
+    }
+
+    #[test]
+    fn escapes_cstring_lit() {
+        assert_eq!(cstring_lit("\"\\r\\n\\t\"").unwrap(), ("", "\r\n\t"));
+    }
 }
