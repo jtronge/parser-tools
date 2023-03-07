@@ -107,6 +107,16 @@ fn get_args<'a>(ti: impl Iterator<Item=Token> + 'a) -> Result<Vec<Vec<Token>>> {
     Ok(args)
 }
 
+enum ScannerItem {
+    /// Token that could be further expanded/replaced
+    Token(Token),
+    /// Arguments of function macro to expand
+    FnMacro {
+        name: String,
+        args: Box<Vec<ScannerItem>>
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
