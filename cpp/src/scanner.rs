@@ -7,6 +7,7 @@ use crate::cmacro::Macro;
 use crate::state::State;
 
 pub struct Scanner {
+    stack: VecDeque<ScannerItem>,
     pub state: State,
     pub ready: VecDeque<Token>,
 }
@@ -14,6 +15,7 @@ pub struct Scanner {
 impl Scanner {
     pub fn new(state: State) -> Scanner {
         Scanner {
+            stack: VecDeque::new(),
             state,
             ready: VecDeque::new(),
         }
@@ -114,7 +116,8 @@ enum ScannerItem {
     FnMacro {
         name: String,
         args: Box<Vec<ScannerItem>>
-    }
+    },
+    Argument(Vec<Token>),
 }
 
 #[cfg(test)]
