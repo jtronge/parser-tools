@@ -6,6 +6,14 @@ use crate::{Result, Error};
 use crate::cmacro::Macro;
 use crate::state::State;
 
+
+pub fn scan(
+    it: impl Iterator<Item=Token>,
+    out: &mut Vec<Token>,
+) -> Result<usize> {
+    Ok(0)
+}
+
 pub struct Scanner {
     stack: VecDeque<ScannerItem>,
     pub state: State,
