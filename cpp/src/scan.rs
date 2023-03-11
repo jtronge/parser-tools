@@ -1,73 +1,16 @@
 use std::borrow::Borrow;
-use std::collections::VecDeque;
+use std::collections::{
+    HashMap,
+    VecDeque,
+};
 use std::rc::Rc;
 use ctokens::Token;
-use crate::{Result, Error};
+use crate::{
+    Result,
+    Error,
+};
 use crate::cmacro::Macro;
 use crate::state::State;
-
-
-pub fn scan(
-    it: impl Iterator<Item=Token>,
-    out: &mut Vec<Token>,
-) -> Result<usize> {
-    Ok(0)
-}
-
-pub struct Scanner {
-    stack: VecDeque<ScannerItem>,
-    pub state: State,
-    pub ready: VecDeque<Token>,
-}
-
-impl Scanner {
-    pub fn new(state: State) -> Scanner {
-        Scanner {
-            stack: VecDeque::new(),
-            state,
-            ready: VecDeque::new(),
-        }
-    }
-
-    /// Check if this token matches a macro name.
-    fn find_macro(&self, tok: &Token) -> Option<Rc<Macro>> {
-        match tok {
-            Token::Ident(ref name) => self.state.find_macro(name),
-            _ => None,
-        }
-    }
-
-/*
-    /// Handle the macro replacement and scanning operation.
-    fn handle_macro(&mut self, mac: Rc<Macro>) -> Result<()> {
-        match &*mac.borrow() {
-            Macro::Object(toks) => {
-                // NOTE: This isn't doing secondary scanning/replacement
-                self.ready.extend(toks.iter().map(|tok| tok.clone()));
-            }
-            Macro::Function(args, toks) => (),
-        }
-        Ok(())
-    }
-
-*/
-    /// Scan for more tokens.
-    pub fn scan(&mut self) -> Result<()> {
-        match self.state.next() {
-            Some(tok) => {
-                let tok = tok?;
-                if let Some(mac) = self.find_macro(&tok) {
-                    // TODO
-                    panic!("Process macro");
-                } else {
-                    self.ready.push_back(tok);
-                }
-            }
-            _ => (),
-        }
-        Ok(())
-    }
-}
 
 /// Get the args for a functional macro.
 fn get_args<'a>(ti: impl Iterator<Item=Token> + 'a) -> Result<Vec<Vec<Token>>> {
@@ -116,17 +59,6 @@ fn get_args<'a>(ti: impl Iterator<Item=Token> + 'a) -> Result<Vec<Vec<Token>>> {
         }
     }
     Ok(args)
-}
-
-enum ScannerItem {
-    /// Token that could be further expanded/replaced
-    Token(Token),
-    /// Arguments of function macro to expand
-    FnMacro {
-        name: String,
-        args: Box<Vec<ScannerItem>>
-    },
-    Argument(Vec<Token>),
 }
 
 #[cfg(test)]
