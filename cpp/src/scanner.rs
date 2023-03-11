@@ -29,7 +29,6 @@ impl Scanner {
         }
     }
 
-/*
     /// Check if this token matches a macro name.
     fn find_macro(&self, tok: &Token) -> Option<Rc<Macro>> {
         match tok {
@@ -38,6 +37,7 @@ impl Scanner {
         }
     }
 
+/*
     /// Handle the macro replacement and scanning operation.
     fn handle_macro(&mut self, mac: Rc<Macro>) -> Result<()> {
         match &*mac.borrow() {
@@ -53,17 +53,18 @@ impl Scanner {
 */
     /// Scan for more tokens.
     pub fn scan(&mut self) -> Result<()> {
-/*
-        if let Some(tok) = self.state.next() {
-            let tok = tok?;
-            if let Some(mac) = self.find_macro(&tok) {
-                self.handle_macro(mac)?;
-            } else {
-                self.ready.push_back(tok);
+        match self.state.next() {
+            Some(tok) => {
+                let tok = tok?;
+                if let Some(mac) = self.find_macro(&tok) {
+                    // TODO
+                    panic!("Process macro");
+                } else {
+                    self.ready.push_back(tok);
+                }
             }
+            _ => (),
         }
-        Ok(())
-*/
         Ok(())
     }
 }
