@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::fs::File;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::cell::RefCell;
 use ctokens::{Token, TokenIter};
 use matching::cident;
 use nom::{
@@ -30,32 +31,29 @@ use crate::{
 };
 use crate::line_processor::LineProcessor;
 use crate::cmacro::Macro;
-use crate::state;
+use crate::state::State;
 
-pub fn process_directives(state: &mut state::State, buffer: &mut VecDeque<Token>) -> Result<()> {
-    Ok(())
-}
-
-/// State at an instant in time of the C preprocessor.
-pub struct State {
-    opts: PreprocessorOptions,
+pub struct DirectivePass {
     /// Line processor
     lp: LineProcessor<File>,
     buffer: VecDeque<Token>,
+    state: Rc<RefCell<State>>,
 }
 
-impl State {
-    pub fn new(path: &str, opts: PreprocessorOptions) -> State {
-        let fp = File::open(path).expect("Could not open file");
-        State {
-            opts,
+impl DirectivePass {
+    pub fn new(state: Rc<RefCell<State>>) -> DirectivePass {
+        let fp = File::open(&state.borrow().files.iter().nth(0).unwrap())
+            .expect("Could not open file");
+        DirectivePass {
             lp: LineProcessor::new(fp),
             buffer: VecDeque::new(),
+            state,
         }
     }
 
     /// Process a directive line and update the state.
-    fn process_directive(&mut self, line: &str, defines: &mut HashMap<String, Rc<Macro>>) -> Result<()> {
+    fn process_directive(&mut self, line: &str) -> Result<()> {
+        let state = self.state.borrow_mut();
         fn match_initial_define(line: &str) -> IResult<&str, &str> {
             let (i, _) = space0(line)?;
             let (i, _) = char('#')(i)?;
@@ -87,7 +85,10 @@ impl State {
 
         if let Ok((i, name)) = match_define_obj(line) {
             let toks = tokenize(i)?;
-            defines.insert(name.to_string(), Rc::new(Macro::Object(toks)));
+            self.state
+                .borrow_mut()
+                .defines
+                .insert(name.to_string(), Rc::new(Macro::Object(toks)));
             eprintln!("Got define for object macro: {}", name);
             Ok(())
         } else if let Ok((i, (name, args))) = match_define_fn(line) {
@@ -97,10 +98,13 @@ impl State {
                 .iter()
                 .map(|arg| arg.to_string())
                 .collect();
-            defines.insert(
-                name.to_string(),
-                Rc::new(Macro::Function(args, toks))
-            );
+            self.state
+                .borrow_mut()
+                .defines
+                .insert(
+                    name.to_string(),
+                    Rc::new(Macro::Function(args, toks)),
+                );
             Ok(())
         } else {
             Err(Error::InvalidMacro)
@@ -116,8 +120,12 @@ impl State {
         }
         Ok(())
     }
+}
 
-    fn next(&mut self, defines: &mut HashMap<String, Rc<Macro>>) -> Option<Result<Token>> {
+impl Iterator for DirectivePass {
+    type Item = Result<Token>;
+
+    fn next(&mut self) -> Option<Self::Item> {
         // First check if the buffer has something
         if let Some(token) = self.buffer.pop_front() {
             return Some(Ok(token));
@@ -133,7 +141,7 @@ impl State {
             };
 
             if is_directive(&line) {
-                if let Err(err) = self.process_directive(&line, defines) {
+                if let Err(err) = self.process_directive(&line) {
                     return Some(Err(err));
                 }
             } else {

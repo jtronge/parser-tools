@@ -12,6 +12,14 @@ use crate::{
 use crate::cmacro::Macro;
 use crate::state::State;
 
+pub fn scan<'a>(
+    ti: impl Iterator<Item=Result<Token>> + 'a,
+    buffer: &mut VecDeque<Token>,
+    ready: &mut VecDeque<Token>,
+) -> Result<()> {
+    Ok(())
+}
+
 /// Get the args for a functional macro.
 fn get_args<'a>(ti: impl Iterator<Item=Token> + 'a) -> Result<Vec<Vec<Token>>> {
     let mut args = vec![];

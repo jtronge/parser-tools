@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use std::collections::HashMap;
 use crate::cmacro::Macro;
+use ctokens::Token;
 
 pub struct State {
     pub defines: HashMap<String, Rc<Macro>>,
@@ -13,6 +14,18 @@ impl State {
         State {
             defines: HashMap::new(),
             files: vec![path.to_string()],
+        }
+    }
+
+    fn find_macro(&self, tok: &Token) -> Option<Rc<Macro>> {
+        if let Token::Ident(ref name) = tok {
+            if let Some(mac) = self.defines.get(name) {
+                Some(Rc::clone(mac))
+            } else {
+                None
+            }
+        } else {
+            None
         }
     }
 }

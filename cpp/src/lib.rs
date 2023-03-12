@@ -4,6 +4,7 @@ use std::collections::{
 };
 use std::path::Path;
 use std::rc::Rc;
+use std::cell::RefCell;
 use ctokens::{
     Token,
     TokenError,
@@ -17,7 +18,7 @@ mod scan;
 
 use cmacro::Macro;
 use state::State;
-use directive::process_directives;
+use directive::DirectivePass;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Error {
@@ -38,47 +39,26 @@ pub struct PreprocessorOptions {
 
 /// C Preprocessor.
 pub struct Preprocessor {
-    state: State,
+    state: Rc<RefCell<State>>,
     buffer: VecDeque<Token>,
     ready: VecDeque<Token>,
+    directive_pass: DirectivePass,
 }
 
 impl Preprocessor {
     /// Initialize a new C Preprocessor tool.
     pub fn new(path: &str, opts: PreprocessorOptions) -> Preprocessor {
         // let state = State::new(path, opts);
-        let state = State::new(path);
+        let state = Rc::new(RefCell::new(State::new(path)));
         let buffer = VecDeque::new();
         let ready = VecDeque::new();
+        let directive_pass = DirectivePass::new(Rc::clone(&state));
         Preprocessor {
             state,
             buffer,
             ready,
+            directive_pass,
         }
-    }
-
-    fn find_macro(&self, tok: &Token) -> Option<Rc<Macro>> {
-        if let Token::Ident(ref name) = tok {
-            if let Some(mac) = self.state.defines.get(name) {
-                Some(Rc::clone(mac))
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-
-    fn scan_next(&mut self) -> Result<()> {
-        process_directives(&mut self.state, &mut self.buffer)?;
-        if let Some(tok) = self.buffer.pop_front() {
-            if let Some(mac) = self.find_macro(&tok) {
-                panic!("found macro");
-            } else {
-                self.ready.push_back(tok);
-            }
-        }
-        Ok(())
     }
 }
 
@@ -87,7 +67,11 @@ impl Iterator for Preprocessor {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.ready.len() == 0 {
-            if let Err(e) = self.scan_next() {
+            if let Err(e) = scan::scan(
+                &mut self.directive_pass,
+                &mut self.buffer,
+                &mut self.ready,
+            ) {
                 return Some(Err(e));
             }
         }
