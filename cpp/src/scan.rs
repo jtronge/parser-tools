@@ -1,9 +1,10 @@
-use std::borrow::Borrow;
+// use std::borrow::Borrow;
 use std::collections::{
     HashMap,
     VecDeque,
 };
 use std::rc::Rc;
+use std::cell::RefCell;
 use ctokens::Token;
 use crate::{
     Result,
@@ -13,10 +14,20 @@ use crate::cmacro::Macro;
 use crate::state::State;
 
 pub fn scan<'a>(
-    ti: impl Iterator<Item=Result<Token>> + 'a,
+    state: Rc<RefCell<State>>,
+    mut ti: impl Iterator<Item=Result<Token>> + 'a,
     buffer: &mut VecDeque<Token>,
     ready: &mut VecDeque<Token>,
 ) -> Result<()> {
+    if let Some(tok) = ti.next() {
+        let tok = tok?;
+        if let Some(mac) = state.borrow().find_macro(&tok) {
+            // TODO: Implement macro replacement
+        } else {
+            // Otherwise push it onto the ready buffer
+            ready.push_back(tok);
+        }
+    }
     Ok(())
 }
 

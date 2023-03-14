@@ -17,7 +17,7 @@ impl State {
         }
     }
 
-    fn find_macro(&self, tok: &Token) -> Option<Rc<Macro>> {
+    pub fn find_macro(&self, tok: &Token) -> Option<Rc<Macro>> {
         if let Token::Ident(ref name) = tok {
             if let Some(mac) = self.defines.get(name) {
                 Some(Rc::clone(mac))

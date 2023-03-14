@@ -68,6 +68,7 @@ impl Iterator for Preprocessor {
     fn next(&mut self) -> Option<Self::Item> {
         if self.ready.len() == 0 {
             if let Err(e) = scan::scan(
+                Rc::clone(&self.state),
                 &mut self.directive_pass,
                 &mut self.buffer,
                 &mut self.ready,
