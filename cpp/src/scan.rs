@@ -1,4 +1,3 @@
-// use std::borrow::Borrow;
 use std::collections::{
     HashMap,
     VecDeque,
@@ -23,6 +22,21 @@ pub fn scan<'a>(
         let tok = tok?;
         if let Some(mac) = state.borrow().find_macro(&tok) {
             // TODO: Implement macro replacement
+            match &*mac {
+                Macro::Function(arg_names, rtoks) => {
+                    let args = get_args(ti)?;
+                    // ...
+                }
+                Macro::Object(rtoks) => {
+/*
+                    let rtoks: Vec<Result<Token>> = rtoks
+                        .iter()
+                        .map(|tok| Ok(tok.clone()))
+                        .collect();
+                    scan(Rc::clone(&state), rtoks.iter(), buffer, ready)?;
+*/
+                }
+            }
         } else {
             // Otherwise push it onto the ready buffer
             ready.push_back(tok);
@@ -32,7 +46,7 @@ pub fn scan<'a>(
 }
 
 /// Get the args for a functional macro.
-fn get_args<'a>(ti: impl Iterator<Item=Token> + 'a) -> Result<Vec<Vec<Token>>> {
+fn get_args<'a>(ti: impl Iterator<Item=Result<Token>> + 'a) -> Result<Vec<Vec<Token>>> {
     let mut args = vec![];
     let mut ti = ti.peekable();
     // Assume opening parenthesis
@@ -43,37 +57,39 @@ fn get_args<'a>(ti: impl Iterator<Item=Token> + 'a) -> Result<Vec<Vec<Token>>> {
         let mut paren_bal = 0;
         loop {
             match ti.peek() {
-                Some(Token::LParen) => paren_bal += 1,
-                Some(Token::RParen) => {
+                Some(Ok(Token::LParen)) => paren_bal += 1,
+                Some(Ok(Token::RParen)) => {
                     if paren_bal == 0 {
                         break;
                     } else {
                         paren_bal -= 1;
                     }
                 }
-                Some(Token::Comma) => {
+                Some(Ok(Token::Comma)) => {
                     if paren_bal == 0 {
                         break;
                     }
                 }
+                Some(Err(err)) => return Err(err.clone()),
                 None => break,
                 _ => (),
             }
-            arg.push(ti.next().unwrap().clone());
+            arg.push(ti.next().unwrap()?.clone());
         }
         match ti.peek() {
             None => return Err(Error::MissingClosingParenMacroCall),
-            Some(Token::Comma) => {
+            Some(Ok(Token::Comma)) => {
                 let _ = ti.next();
                 args.push(arg);
             }
-            Some(Token::RParen) => {
+            Some(Ok(Token::RParen)) => {
                 if arg.len() > 0 || args.len() > 0 {
                     args.push(arg);
                 }
                 let _ = ti.next();
                 break;
             }
+            Some(Err(err)) => return Err(err.clone()),
             _ => (),
         }
     }
