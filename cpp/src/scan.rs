@@ -12,6 +12,46 @@ use crate::{
 use crate::cmacro::Macro;
 use crate::state::State;
 
+struct ScanBuffer<I> {
+    input: I,
+    tmp: VecDeque<ScanItem>,
+    pub staging: VecDeque<ScanItem>,
+}
+
+impl<I> ScanBuffer<I>
+where
+    I: Iterator<Item=Result<Token>>,
+{
+    fn new(input: I) -> ScanBuffer<I> {
+        ScanBuffer {
+            input,
+            tmp: VecDeque::new(),
+            staging: VecDeque::new(),
+        }
+    }
+
+    fn next_item(&mut self) -> Option<Result<ScanItem>> {
+        Some(Ok(ScanItem::Arg))
+    }
+
+    /// Return true if the temporary internal buffer is empty, thus no more
+    /// immediate tokens to process for now.
+    fn empty(&self) -> bool {
+        self.tmp.len() == 0
+    }
+}
+
+impl<I> Iterator for ScanBuffer<I>
+where
+    I: Iterator<Item=Result<Token>>,
+{
+    type Item = Result<Token>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        None
+    }
+}
+
 enum ScanItem {
     FnMacro(Rc<Macro>),
     Arg,
@@ -23,9 +63,40 @@ pub fn scan<'a>(
     mut ti: impl Iterator<Item=Result<Token>> + 'a,
     ready: &mut VecDeque<Token>,
 ) -> Result<()> {
-    let mut staging = VecDeque::new();
-    let mut tmp = VecDeque::new();
+    let mut sbuf = ScanBuffer::new(ti);
+    // let mut staging = VecDeque::new();
+    // let mut tmp = VecDeque::new();
+
     loop {
+        if let Some(item) = sbuf.next_item() {
+            match item? {
+                ScanItem::FnMacro(mac) => {
+                    // Do function macro replacement
+                }
+                ScanItem::Arg => {
+                    // Nothing to do here
+                    sbuf.staging.push_back(ScanItem::Arg);
+                }
+                ScanItem::Token(tok) => {
+                    // Process the token
+                }
+            }
+        } else {
+            break;
+        }
+        if sbuf.empty() {
+            // Nothing left to process for now
+            break;
+        }
+    }
+/*
+    loop {
+        let tok = if let Some(item) = staging.pop_front() {
+            item
+        } else let Some(tok) = ti.next() {
+            let tok = tok?;
+            ScanItem::Token(tok)
+        };
         if let Some(tok) = ti.next() {
             let tok = tok?;
             if let Some(mac) = state.borrow().find_macro(&tok) {
@@ -55,9 +126,10 @@ pub fn scan<'a>(
             break;
         }
     }
+*/
     // Add everything left in tmp to the ready buffer
     ready.extend(
-        tmp
+        sbuf.staging
             .iter()
             .filter_map(|item| match item {
                 ScanItem::FnMacro(_) => None,
