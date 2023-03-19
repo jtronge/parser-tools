@@ -70,7 +70,6 @@ impl Iterator for Preprocessor {
             if let Err(e) = scan::scan(
                 Rc::clone(&self.state),
                 &mut self.directive_pass,
-                &mut self.buffer,
                 &mut self.ready,
             ) {
                 return Some(Err(e));
