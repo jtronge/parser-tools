@@ -28,6 +28,8 @@ pub enum Error {
     /// Missing a closing parenthesis for a macro all
     MissingClosingParenMacroCall,
     InvalidMacro,
+    /// Invalid condition during the scan step
+    ScanInternalError,
 }
 
 type Result<T> = std::result::Result<T, Error>;

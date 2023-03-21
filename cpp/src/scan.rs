@@ -31,24 +31,18 @@ where
     }
 
     fn next_item(&mut self) -> Option<Result<ScanItem>> {
-        Some(Ok(ScanItem::Arg))
+        if let Some(item) = self.tmp.pop_front() {
+            Some(Ok(item))
+        } else {
+            self.input.next()
+                .map(|tok| Ok(ScanItem::Token(tok?)))
+        }
     }
 
     /// Return true if the temporary internal buffer is empty, thus no more
     /// immediate tokens to process for now.
     fn empty(&self) -> bool {
         self.tmp.len() == 0
-    }
-}
-
-impl<I> Iterator for ScanBuffer<I>
-where
-    I: Iterator<Item=Result<Token>>,
-{
-    type Item = Result<Token>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        None
     }
 }
 
@@ -143,44 +137,49 @@ pub fn scan<'a>(
 /// Fill buf with the args for a functional macro, adding barrier items as
 /// needed (ScanItem::Arg). Return the number of arguments processed or error.
 fn get_args<'a>(
-    ti: impl Iterator<Item=Result<Token>> + 'a,
+    ti: impl Iterator<Item=Result<ScanItem>> + 'a,
     buf: &mut VecDeque<ScanItem>,
 ) -> Result<usize> {
     let mut argc = 0;
     let mut ti = ti.peekable();
     // Assume opening parenthesis
     let _ = ti.next();
-    let mut push_arg = |arg: Vec<Token>| {
-    };
     loop {
         let mut arg = vec![];
         let mut paren_bal = 0;
         loop {
             match ti.peek() {
-                Some(Ok(Token::LParen)) => paren_bal += 1,
-                Some(Ok(Token::RParen)) => {
+                Some(Ok(ScanItem::Token(Token::LParen))) => paren_bal += 1,
+                Some(Ok(ScanItem::Token(Token::RParen))) => {
                     if paren_bal == 0 {
                         break;
                     } else {
                         paren_bal -= 1;
                     }
                 }
-                Some(Ok(Token::Comma)) => {
+                Some(Ok(ScanItem::Token(Token::Comma))) => {
                     if paren_bal == 0 {
                         break;
                     }
                 }
+                Some(Ok(ScanItem::Token(_))) => (),
+                Some(Ok(_)) => return Err(Error::ScanInternalError),
                 Some(Err(err)) => return Err(err.clone()),
                 None => break,
                 _ => (),
             }
-            arg.push(ti.next().unwrap()?.clone());
+            if let Some(item) = ti.next() {
+                let item = item?;
+                if let ScanItem::Token(tok) = item {
+                    arg.push(tok.clone());
+                }
+            }
         }
         // Note code is duplicated here rather than using a closure with an
         // Rc<Cell<usize>>. Perhaps there's a better way.
         match ti.peek() {
             None => return Err(Error::MissingClosingParenMacroCall),
-            Some(Ok(Token::Comma)) => {
+            Some(Ok(ScanItem::Token(Token::Comma))) => {
                 let _ = ti.next();
                 argc += 1;
                 buf.push_front(ScanItem::Arg);
@@ -188,7 +187,7 @@ fn get_args<'a>(
                     buf.push_front(ScanItem::Token(tok.clone()));
                 }
             }
-            Some(Ok(Token::RParen)) => {
+            Some(Ok(ScanItem::Token(Token::RParen))) => {
                 let _ = ti.next();
                 if arg.len() > 0 || argc > 0 {
                     argc += 1;
@@ -199,6 +198,8 @@ fn get_args<'a>(
                 }
                 break;
             }
+            Some(Ok(ScanItem::Token(_))) => (),
+            Some(Ok(_)) => return Err(Error::ScanInternalError),
             Some(Err(err)) => return Err(err.clone()),
             _ => (),
         }
@@ -231,8 +232,11 @@ mod test {
             Token::RParen,
         ];
         let mut args = VecDeque::new();
+        let ti = toks
+            .iter()
+            .map(|tok| Ok(ScanItem::Token(tok.clone())));
 
-        assert_eq!(get_args(toks.iter().map(|tok| Ok(tok.clone())), &mut args), Ok(0));
+        assert_eq!(get_args(ti, &mut args), Ok(0));
 
         assert_eq!(args.len(), 0);
     }
@@ -245,8 +249,11 @@ mod test {
             Token::RParen,
         ];
         let mut args = VecDeque::new();
+        let ti = toks
+            .iter()
+            .map(|tok| Ok(ScanItem::Token(tok.clone())));
 
-        assert_eq!(get_args(toks.iter().map(|tok| Ok(tok.clone())), &mut args), Ok(1));
+        assert_eq!(get_args(ti, &mut args), Ok(1));
 
         assert_eq!(args.len(), 2);
         assert!(match_token(&args[0], Token::Ident("Ciao, mondo".to_string())));
@@ -265,8 +272,11 @@ mod test {
             Token::RParen,
         ];
         let mut args = VecDeque::new();
+        let ti = toks
+            .iter()
+            .map(|tok| Ok(ScanItem::Token(tok.clone())));
 
-        assert_eq!(get_args(toks.iter().map(|tok| Ok(tok.clone())), &mut args), Ok(2));
+        assert_eq!(get_args(ti, &mut args), Ok(2));
 
         assert_eq!(args.len(), 6);
         assert!(match_token(&args[0], Token::LParen));
