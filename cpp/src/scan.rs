@@ -13,8 +13,7 @@ use crate::cmacro::Macro;
 use crate::state::State;
 
 struct ScanBuffer<I> {
-    input: I,
-    tmp: VecDeque<ScanItem>,
+    pub stream: ScanStream<I>,
     pub staging: VecDeque<ScanItem>,
 }
 
@@ -24,25 +23,44 @@ where
 {
     fn new(input: I) -> ScanBuffer<I> {
         ScanBuffer {
-            input,
-            tmp: VecDeque::new(),
+            stream: ScanStream {
+                input,
+                tmp: VecDeque::new(),
+            },
             staging: VecDeque::new(),
         }
     }
+}
 
-    fn next_item(&mut self) -> Option<Result<ScanItem>> {
+struct ScanStream<I> {
+    input: I,
+    tmp: VecDeque<ScanItem>,
+}
+
+impl<I> ScanStream<I>
+where
+    I: Iterator<Item=Result<Token>>,
+{
+    /// Return true if the temporary internal buffer is empty, thus no more
+    /// immediate tokens to process for now.
+    fn empty(&self) -> bool {
+        self.tmp.len() == 0
+    }
+}
+
+impl<I> Iterator for ScanStream<I>
+where
+    I: Iterator<Item=Result<Token>>,
+{
+    type Item = Result<ScanItem>;
+
+    fn next(&mut self) -> Option<Self::Item> {
         if let Some(item) = self.tmp.pop_front() {
             Some(Ok(item))
         } else {
             self.input.next()
                 .map(|tok| Ok(ScanItem::Token(tok?)))
         }
-    }
-
-    /// Return true if the temporary internal buffer is empty, thus no more
-    /// immediate tokens to process for now.
-    fn empty(&self) -> bool {
-        self.tmp.len() == 0
     }
 }
 
@@ -62,10 +80,11 @@ pub fn scan<'a>(
     // let mut tmp = VecDeque::new();
 
     loop {
-        if let Some(item) = sbuf.next_item() {
+        if let Some(item) = sbuf.stream.next() {
             match item? {
                 ScanItem::FnMacro(mac) => {
                     // Do function macro replacement
+                    let count = get_args(&mut sbuf.stream, &mut sbuf.staging)?;
                 }
                 ScanItem::Arg => {
                     // Nothing to do here
@@ -78,7 +97,7 @@ pub fn scan<'a>(
         } else {
             break;
         }
-        if sbuf.empty() {
+        if sbuf.stream.empty() {
             // Nothing left to process for now
             break;
         }
