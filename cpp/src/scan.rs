@@ -46,6 +46,11 @@ where
     fn empty(&self) -> bool {
         self.tmp.len() == 0
     }
+
+    /// Push an item on to the stream
+    fn push(&mut self, item: ScanItem) {
+        self.tmp.push_front(item);
+    }
 }
 
 impl<I> Iterator for ScanStream<I>
@@ -83,8 +88,6 @@ pub fn scan<'a>(
         if let Some(item) = sbuf.stream.next() {
             match item? {
                 ScanItem::FnMacro(mac) => {
-                    // Do function macro replacement
-                    let count = get_args(&mut sbuf.stream, &mut sbuf.staging)?;
                 }
                 ScanItem::Arg => {
                     // Nothing to do here
@@ -92,6 +95,23 @@ pub fn scan<'a>(
                 }
                 ScanItem::Token(tok) => {
                     // Process the token
+                    if let Some(mac) = state.borrow().find_macro(&tok) {
+                        match *mac {
+                            Macro::Function(ref args, ref toks) => {
+                                // Do function macro replacement
+                                let count = get_args(&mut sbuf.stream, &mut sbuf.staging)?;
+                                if count != args.len() {
+                                    return Err(Error::InvalidMacroArgumentCount);
+                                }
+                            }
+                            Macro::Object(ref toks) => {
+                                // ...
+                            }
+                        }
+                    } else {
+                        // TODO: Should this go on staging or be pushed back onto the stream?
+                        sbuf.staging.push_front(ScanItem::Token(tok));
+                    }
                 }
             }
         } else {

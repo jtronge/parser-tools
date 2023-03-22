@@ -30,6 +30,8 @@ pub enum Error {
     InvalidMacro,
     /// Invalid condition during the scan step
     ScanInternalError,
+    /// Invalid number of arguments to a macro
+    InvalidMacroArgumentCount,
 }
 
 type Result<T> = std::result::Result<T, Error>;
