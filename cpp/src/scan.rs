@@ -97,6 +97,24 @@ where
                 i += 1;
             }
             idx.push((start, i));
+            for tok in toks {
+                if let Token::Ident(ident) = tok {
+                    // If it's an argument, then replace it
+                    if let Some(j) = args.iter().position(|arg| *arg == *ident) {
+                        for k in idx[j].0..idx[j].1 {
+                            if let ScanItem::Token(other_tok) = &sbuf.staging[k] {
+                                sbuf.stream.push(ScanItem::Token(other_tok.clone()));
+                            } else {
+                                panic!("Found incorrect value in staging buffer");
+                            }
+                        }
+                    } else {
+                        sbuf.stream.push(ScanItem::Token(tok.clone()));
+                    }
+                } else {
+                    sbuf.stream.push(ScanItem::Token(tok.clone()));
+                }
+            }
         }
         println!("{:?}", idx);
     } else {
@@ -150,44 +168,6 @@ pub fn scan<'a>(
             break;
         }
     }
-/*
-    loop {
-        let tok = if let Some(item) = staging.pop_front() {
-            item
-        } else let Some(tok) = ti.next() {
-            let tok = tok?;
-            ScanItem::Token(tok)
-        };
-        if let Some(tok) = ti.next() {
-            let tok = tok?;
-            if let Some(mac) = state.borrow().find_macro(&tok) {
-                // TODO: Implement macro replacement
-                match &*mac {
-                    Macro::Function(arg_names, rtoks) => {
-                        get_args(&mut ti, &mut staging)?;
-                        // ...
-                    }
-                    Macro::Object(rtoks) => {
-/*
-                    let rtoks: Vec<Result<Token>> = rtoks
-                        .iter()
-                        .map(|tok| Ok(tok.clone()))
-                        .collect();
-                    scan(Rc::clone(&state), rtoks.iter(), buffer, ready)?;
-*/
-                    }
-                }
-            } else {
-                // Otherwise push it onto the ready buffer
-                ready.push_back(tok);
-            }
-        }
-        // Stop when there's nothing left in staging
-        if staging.len() == 0 {
-            break;
-        }
-    }
-*/
     // Add everything left in tmp to the ready buffer
     ready.extend(
         sbuf.staging
