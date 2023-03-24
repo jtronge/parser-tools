@@ -75,6 +75,35 @@ enum ScanItem {
     Token(Token),
 }
 
+/// Handle a function macro on the stream
+fn fn_macro<I>(
+    state: &Rc<RefCell<State>>,
+    mac: Rc<Macro>,
+    sbuf: &mut ScanBuffer<I>,
+)
+where
+    I: Iterator<Item=Result<Token>>,
+{
+    if let Macro::Function(ref args, ref toks) = *mac {
+        // Determine the argument indices in staging
+        let mut idx = vec![];
+        let mut i = 0;
+        while idx.len() < args.len() {
+            let start = i;
+            loop {
+                if let ScanItem::Arg = sbuf.staging[i] {
+                    break;
+                }
+                i += 1;
+            }
+            idx.push((start, i));
+        }
+        println!("{:?}", idx);
+    } else {
+        panic!("Invalid macro on scan stream");
+    }
+}
+
 pub fn scan<'a>(
     state: Rc<RefCell<State>>,
     mut ti: impl Iterator<Item=Result<Token>> + 'a,
@@ -87,8 +116,7 @@ pub fn scan<'a>(
     loop {
         if let Some(item) = sbuf.stream.next() {
             match item? {
-                ScanItem::FnMacro(mac) => {
-                }
+                ScanItem::FnMacro(mac) => fn_macro(&state, mac, &mut sbuf),
                 ScanItem::Arg => {
                     // Nothing to do here
                     sbuf.staging.push_back(ScanItem::Arg);
