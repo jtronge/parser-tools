@@ -69,10 +69,32 @@ where
     }
 }
 
+// TODO: Maybe there should be a # and ## operator here as well?
 enum ScanItem {
     FnMacro(Rc<Macro>),
     Arg,
     Token(Token),
+}
+
+/// Determine the concatation operation indices (i.e. `name##arg`).
+///
+/// There needs to be a better way to encode this initially.
+fn determine_concat_args(toks: &[Token]) -> Vec<usize> {
+    let mut idx = vec![];
+    let mut i = 0;
+    for i in 0..toks.len() {
+        if i > 0 && i < (toks.len() - 1){
+            if let Token::DoubleHash = toks[i] {
+                idx.push(i - 1);
+                idx.push(i + 1);
+            }
+        }
+    }
+    idx
+}
+
+fn determine_string_args(toks: &[Token]) -> Vec<usize> {
+    vec![]
 }
 
 /// Handle a function macro on the stream
@@ -97,23 +119,29 @@ where
                 i += 1;
             }
             idx.push((start, i));
-            for tok in toks {
-                if let Token::Ident(ident) = tok {
-                    // If it's an argument, then replace it
-                    if let Some(j) = args.iter().position(|arg| *arg == *ident) {
-                        for k in idx[j].0..idx[j].1 {
-                            if let ScanItem::Token(other_tok) = &sbuf.staging[k] {
-                                sbuf.stream.push(ScanItem::Token(other_tok.clone()));
-                            } else {
-                                panic!("Found incorrect value in staging buffer");
-                            }
+        }
+        // Determine the concatation and stringify args
+        let concat_args = determine_concat_args(toks);
+        let string_args = determine_string_args(toks);
+        // Index of the arg being replaced
+        let mut repl_arg_idx = 0;
+        for tok in toks {
+            if let Token::Ident(ident) = tok {
+                // If it's an argument, then replace it
+                if let Some(j) = args.iter().position(|arg| *arg == *ident) {
+                    for k in idx[j].0..idx[j].1 {
+                        if let ScanItem::Token(other_tok) = &sbuf.staging[k] {
+                            sbuf.stream.push(ScanItem::Token(other_tok.clone()));
+                        } else {
+                            panic!("Found incorrect value in staging buffer");
                         }
-                    } else {
-                        sbuf.stream.push(ScanItem::Token(tok.clone()));
+                        repl_arg_idx += 1;
                     }
                 } else {
                     sbuf.stream.push(ScanItem::Token(tok.clone()));
                 }
+            } else {
+                sbuf.stream.push(ScanItem::Token(tok.clone()));
             }
         }
         println!("{:?}", idx);
@@ -151,7 +179,9 @@ pub fn scan<'a>(
                                 }
                             }
                             Macro::Object(ref toks) => {
-                                // ...
+                                for tok in toks {
+                                    sbuf.stream.push(ScanItem::Token(tok.clone()));
+                                }
                             }
                         }
                     } else {

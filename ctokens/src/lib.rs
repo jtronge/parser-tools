@@ -27,6 +27,10 @@ pub enum Token {
     LParen,
     /// )
     RParen,
+    /// #
+    SingleHash,
+    /// ##
+    DoubleHash,
 }
 
 /// To be used for iterating over the tokens of an &str.
