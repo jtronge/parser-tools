@@ -43,10 +43,8 @@ pub struct PreprocessorOptions {
 
 /// C Preprocessor.
 pub struct Preprocessor {
-    state: Rc<RefCell<State>>,
-    buffer: VecDeque<Token>,
-    ready: VecDeque<Token>,
-    directive_pass: DirectivePass,
+    toks: Vec<Token>,
+    i: usize,
 }
 
 impl Preprocessor {
@@ -54,14 +52,12 @@ impl Preprocessor {
     pub fn new(path: &str, opts: PreprocessorOptions) -> Preprocessor {
         // let state = State::new(path, opts);
         let state = Rc::new(RefCell::new(State::new(path)));
-        let buffer = VecDeque::new();
-        let ready = VecDeque::new();
-        let directive_pass = DirectivePass::new(Rc::clone(&state));
+        let mut directive_pass = DirectivePass::new(Rc::clone(&state));
+        let mut toks = vec![];
+        scan::scan(state, &mut directive_pass, &mut toks);
         Preprocessor {
-            state,
-            buffer,
-            ready,
-            directive_pass,
+            toks,
+            i: 0,
         }
     }
 }
@@ -70,17 +66,10 @@ impl Iterator for Preprocessor {
     type Item = Result<Token>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.ready.len() == 0 {
-            if let Err(e) = scan::scan(
-                Rc::clone(&self.state),
-                &mut self.directive_pass,
-                &mut self.ready,
-            ) {
-                return Some(Err(e));
-            }
+        if self.i > self.toks.len() {
+            None
+        } else {
+            Some(Ok(self.toks[self.i].clone()))
         }
-        self.ready
-            .pop_front()
-            .map(|rtok| Ok(rtok))
     }
 }
