@@ -24,6 +24,17 @@ pub fn scan<'a>(
     mut ti: impl Iterator<Item=Result<Token>> + 'a,
     ready: &mut Vec<Token>,
 ) -> Result<()> {
+    while let Some(tok) = ti.next() {
+        let tok = tok?;
+        if let Some(mac) = state.borrow().find_macro(&tok) {
+            match &*mac {
+                Macro::Function(args, toks) => {}
+                Macro::Object(toks) => {}
+            }
+        } else {
+            ready.push(tok);
+        }
+    }
     Ok(())
 }
 
