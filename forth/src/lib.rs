@@ -1,5 +1,7 @@
 //! Simple forth implementation
 
+mod parse;
+
 #[derive(Debug, PartialEq)]
 pub enum ExecResult {
     Integer(i64),
