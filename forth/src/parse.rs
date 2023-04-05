@@ -34,10 +34,19 @@ impl<'a> Iterator for TokenStream<'a> {
 mod test {
     use super::*;
 
+    #[test]
     fn test_integer() {
         let mut stream = TokenStream::new("123");
 
         assert_eq!(stream.next().unwrap(), Ok(Token::Integer(123)));
+        assert_eq!(stream.next(), None);
+    }
+
+    #[test]
+    fn test_ident() {
+        let mut stream = TokenStream::new("test-name");
+
+        assert_eq!(stream.next().unwrap(), Ok(Token::Ident("test-name".into())));
         assert_eq!(stream.next(), None);
     }
 }
