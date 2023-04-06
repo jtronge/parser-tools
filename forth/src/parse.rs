@@ -1,4 +1,7 @@
 //! Forth parsing module
+use std::str::Chars;
+use std::iter::Peekable;
+
 #[derive(Debug, PartialEq)]
 pub enum ParseError {}
 
@@ -11,13 +14,13 @@ pub enum Token {
 }
 
 pub struct TokenStream<'a> {
-    code: &'a str,
+    code: Peekable<Chars<'a>>,
 }
 
 impl<'a> TokenStream<'a> {
     pub fn new(code: &'a str) -> TokenStream<'a> {
         TokenStream {
-            code,
+            code: code.chars().peekable(),
         }
     }
 }
@@ -26,8 +29,26 @@ impl<'a> Iterator for TokenStream<'a> {
     type Item = ParseResult<Token>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        None
+        if let Some((ident, rest)) = lex_ident(self.code.clone()) {
+            self.code = rest;
+            Some(Ok(Token::Ident(ident)))
+        } else if let Some((i, rest)) = lex_number(self.code.clone()) {
+            self.code = rest;
+            Some(Ok(Token::Integer(i)))
+        } else {
+            None
+        }
     }
+}
+
+/// Tokenize an identifier
+pub fn lex_ident(s: Peekable<Chars>) -> Option<(String, Peekable<Chars>)> {
+    None
+}
+
+/// Tokenize a number
+pub fn lex_number(s: Peekable<Chars>) -> Option<(i64, Peekable<Chars>)> {
+    None
 }
 
 #[cfg(test)]
