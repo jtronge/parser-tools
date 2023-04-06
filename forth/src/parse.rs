@@ -8,9 +8,15 @@ pub enum ParseError {}
 type ParseResult<T> = std::result::Result<T, ParseError>;
 
 #[derive(Debug, PartialEq)]
+pub enum Number {
+    Real(i64, u64),
+    Integer(i64),
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Token {
     Ident(String),
-    Integer(i64),
+    Number(Number),
 }
 
 pub struct TokenStream<'a> {
@@ -32,9 +38,9 @@ impl<'a> Iterator for TokenStream<'a> {
         if let Some((ident, rest)) = lex_ident(self.code.clone()) {
             self.code = rest;
             Some(Ok(Token::Ident(ident)))
-        } else if let Some((i, rest)) = lex_number(self.code.clone()) {
+        } else if let Some((num, rest)) = lex_number(self.code.clone()) {
             self.code = rest;
-            Some(Ok(Token::Integer(i)))
+            Some(Ok(Token::Number(num)))
         } else {
             None
         }
@@ -47,7 +53,7 @@ pub fn lex_ident(s: Peekable<Chars>) -> Option<(String, Peekable<Chars>)> {
 }
 
 /// Tokenize a number
-pub fn lex_number(s: Peekable<Chars>) -> Option<(i64, Peekable<Chars>)> {
+pub fn lex_number(s: Peekable<Chars>) -> Option<(Number, Peekable<Chars>)> {
     None
 }
 
@@ -59,7 +65,7 @@ mod test {
     fn test_integer() {
         let mut stream = TokenStream::new("123");
 
-        assert_eq!(stream.next().unwrap(), Ok(Token::Integer(123)));
+        assert_eq!(stream.next().unwrap(), Ok(Token::Number(Number::Integer(123))));
         assert_eq!(stream.next(), None);
     }
 
