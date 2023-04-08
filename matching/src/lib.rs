@@ -51,6 +51,16 @@ pub fn cident(i: &str) -> IResult<&str, &str> {
     )(i)
 }
 
+/// Match a kebab-style identifier.
+pub fn kebab_ident(i: &str) -> IResult<&str, &str> {
+    recognize(
+        pair(
+            alt((alpha1, tag("-"))),
+            many0_nocount(alt((alphanumeric1, tag("-")))),
+        )
+    )(i)
+}
+
 /// Match a left parenthesis.
 pub fn lparen(i: &str) -> IResult<&str, &str> {
     tag("(")(i)
@@ -119,5 +129,20 @@ mod test {
     #[test]
     fn escapes_cstring_lit() {
         assert_eq!(cstring_lit("\"\\r\\n\\t\"").unwrap(), ("", "\r\n\t"));
+    }
+
+    #[test]
+    fn empty_kebab_ident() {
+        assert!(kebab_ident("").is_err());
+    }
+
+    #[test]
+    fn one_char_kebab_ident() {
+        assert_eq!(kebab_ident("a").unwrap(), ("a", ""));
+    }
+
+    #[test]
+    fn ident_w_dash_kebab_ident() {
+        assert_eq!(kebab_ident("abc-def").unwrap(), ("abc-def", ""));
     }
 }
