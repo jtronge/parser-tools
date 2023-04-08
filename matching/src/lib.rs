@@ -12,6 +12,7 @@ use nom::{
     character::complete::{
         alphanumeric1,
         alpha1,
+        digit1,
         char,
     },
     bytes::complete::tag,
@@ -59,6 +60,11 @@ pub fn kebab_ident(i: &str) -> IResult<&str, &str> {
             many0_nocount(alt((alphanumeric1, tag("-")))),
         )
     )(i)
+}
+
+/// Match a generic number.
+pub fn number(i: &str) -> IResult<&str, &str> {
+    digit1(i)
 }
 
 /// Match a left parenthesis.
@@ -138,11 +144,26 @@ mod test {
 
     #[test]
     fn one_char_kebab_ident() {
-        assert_eq!(kebab_ident("a").unwrap(), ("a", ""));
+        assert_eq!(kebab_ident("a").unwrap(), ("", "a"));
     }
 
     #[test]
     fn ident_w_dash_kebab_ident() {
-        assert_eq!(kebab_ident("abc-def").unwrap(), ("abc-def", ""));
+        assert_eq!(kebab_ident("abc-def").unwrap(), ("", "abc-def"));
+    }
+
+    #[test]
+    fn number_empty() {
+        assert!(number("").is_err());
+    }
+
+    #[test]
+    fn number_integer() {
+        assert_eq!(number("123").unwrap(), ("", "123"));
+    }
+
+    #[test]
+    fn number_real() {
+        assert_eq!(number("123.89").unwrap(), ("", "123.89"));
     }
 }
