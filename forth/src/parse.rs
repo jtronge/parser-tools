@@ -1,32 +1,30 @@
 //! Forth parsing module
 use std::str::Chars;
 use std::iter::Peekable;
+use matching::{kebab_ident, number, space};
 
 #[derive(Debug, PartialEq)]
-pub enum ParseError {}
+pub enum ParseError {
+    InvalidToken,
+}
 
 type ParseResult<T> = std::result::Result<T, ParseError>;
 
 #[derive(Debug, PartialEq)]
-pub enum Number {
-    Real(i64, u64),
-    Integer(i64),
-}
-
-#[derive(Debug, PartialEq)]
 pub enum Token {
     Ident(String),
-    Number(Number),
+    Number(String),
 }
 
 pub struct TokenStream<'a> {
-    code: Peekable<Chars<'a>>,
+    // code: Peekable<Chars<'a>>,
+    code: &'a str,
 }
 
 impl<'a> TokenStream<'a> {
     pub fn new(code: &'a str) -> TokenStream<'a> {
         TokenStream {
-            code: code.chars().peekable(),
+            code,
         }
     }
 }
@@ -35,26 +33,23 @@ impl<'a> Iterator for TokenStream<'a> {
     type Item = ParseResult<Token>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some((ident, rest)) = lex_ident(self.code.clone()) {
-            self.code = rest;
-            Some(Ok(Token::Ident(ident)))
-        } else if let Some((num, rest)) = lex_number(self.code.clone()) {
-            self.code = rest;
-            Some(Ok(Token::Number(num)))
+        // Skip spaces if necessary
+        if let Ok((i, s)) = space(self.code) {
+            self.code = i;
+        }
+        if self.code.len() == 0 {
+            return None;
+        }
+        if let Ok((i, ident)) = kebab_ident(self.code) {
+            self.code = i;
+            Some(Ok(Token::Ident(ident.into())))
+        } else if let Ok((i, num)) = number(self.code) {
+            self.code = i;
+            Some(Ok(Token::Number(num.into())))
         } else {
-            None
+            Some(Err(ParseError::InvalidToken))
         }
     }
-}
-
-/// Tokenize an identifier
-pub fn lex_ident(s: Peekable<Chars>) -> Option<(String, Peekable<Chars>)> {
-    None
-}
-
-/// Tokenize a number
-pub fn lex_number(s: Peekable<Chars>) -> Option<(Number, Peekable<Chars>)> {
-    None
 }
 
 #[cfg(test)]
@@ -65,7 +60,7 @@ mod test {
     fn test_integer() {
         let mut stream = TokenStream::new("123");
 
-        assert_eq!(stream.next().unwrap(), Ok(Token::Number(Number::Integer(123))));
+        assert_eq!(stream.next().unwrap(), Ok(Token::Number("123".into())));
         assert_eq!(stream.next(), None);
     }
 

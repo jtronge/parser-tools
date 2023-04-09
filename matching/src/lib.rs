@@ -14,7 +14,9 @@ use nom::{
         alpha1,
         digit1,
         char,
+        multispace0,
     },
+    number::complete::recognize_float,
     bytes::complete::tag,
     multi::many0_count,
 };
@@ -64,7 +66,7 @@ pub fn kebab_ident(i: &str) -> IResult<&str, &str> {
 
 /// Match a generic number.
 pub fn number(i: &str) -> IResult<&str, &str> {
-    digit1(i)
+    recognize_float(i)
 }
 
 /// Match a left parenthesis.
@@ -86,6 +88,11 @@ pub fn comma(i: &str) -> IResult<&str, &str> {
 pub fn cstring_lit(i: &str) -> IResult<&str, &str> {
     // TODO
     alphanumeric1(i)
+}
+
+/// Match 0 or more space characters (or tabs, newlines, etc.).
+pub fn space(i: &str) -> IResult<&str, &str> {
+    multispace0(i)
 }
 
 #[cfg(test)]

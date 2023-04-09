@@ -13,6 +13,9 @@ dependencies = [
 [[package]]
 name = "forth"
 version = "0.1.0"
+dependencies = [
+ "matching",
+]
 
 [[package]]
 name = "matching"
