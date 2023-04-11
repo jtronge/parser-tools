@@ -1,4 +1,5 @@
 //! Simple forth implementation
+use std::str::FromStr;
 
 mod parse;
 use parse::{Token, TokenStream};
@@ -17,7 +18,26 @@ pub type Result<T> = std::result::Result<T, ExecError>;
 
 pub fn execute(code: &str) -> Result<ExecResult> {
     let toks: Vec<Token> = TokenStream::new(code).map(|tok| tok.unwrap()).collect();
-    Err(ExecError::NotImplemented)
+    let mut stack = vec![];
+    for tok in toks {
+        match tok {
+            Token::Ident(ref ident) => {
+                match &ident[..] {
+                    "add" => {
+                        let a = stack.pop().unwrap();
+                        let b = stack.pop().unwrap();
+                        stack.push(a + b);
+                    }
+                    _ => return Err(ExecError::NotImplemented),
+                }
+            }
+            Token::Number(ref num) => {
+                stack.push(i64::from_str(num).unwrap());
+            }
+        }
+    }
+    // Return the top of the stack
+    Ok(ExecResult::Integer(stack[0]))
 }
 
 #[cfg(test)]
