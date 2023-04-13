@@ -28,6 +28,11 @@ pub fn execute(code: &str) -> Result<ExecResult> {
                         let b = stack.pop().unwrap();
                         stack.push(a + b);
                     }
+                    "mult" => {
+                        let a = stack.pop().unwrap();
+                        let b = stack.pop().unwrap();
+                        stack.push(a * b);
+                    }
                     _ => return Err(ExecError::NotImplemented),
                 }
             }
@@ -47,5 +52,10 @@ mod test {
     #[test]
     fn simple_expr() {
         assert_eq!(execute("1 2 add").unwrap(), ExecResult::Integer(3));
+    }
+
+    #[test]
+    fn mult_expr() {
+        assert_eq!(execute("3 2 mult").unwrap(), ExecResult::Integer(6));
     }
 }
