@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 mod parse;
 use parse::{Token, TokenStream};
+mod op;
 
 #[derive(Debug, PartialEq)]
 pub enum ExecResult {
