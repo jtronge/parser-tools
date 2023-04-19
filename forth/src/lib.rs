@@ -21,9 +21,13 @@ pub enum StackItem {
     Real(f64),
 }
 
-pub enum Stackitem2<'a> {
+pub enum StackItem2<'a> {
     Text(&'a str),
     Op(usize),
+}
+
+pub fn tokenize(s: &str) -> Vec<StackItem2> {
+    vec![]
 }
 
 pub type Result<T> = std::result::Result<T, ExecError>;
