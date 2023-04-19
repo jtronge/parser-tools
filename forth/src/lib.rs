@@ -21,6 +21,11 @@ pub enum StackItem {
     Real(f64),
 }
 
+pub enum Stackitem2<'a> {
+    Text(&'a str),
+    Op(usize),
+}
+
 pub type Result<T> = std::result::Result<T, ExecError>;
 
 pub fn execute(code: &str) -> Result<ExecResult> {
